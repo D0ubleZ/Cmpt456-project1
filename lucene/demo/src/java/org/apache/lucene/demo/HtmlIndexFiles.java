@@ -16,11 +16,11 @@
  */
 package org.apache.lucene.demo;
 
-
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
+import java.io.*;
+// import java.io.BufferedReader;
+// import java.io.IOException;
+// import java.io.InputStream;
+// import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
@@ -43,17 +43,18 @@ import org.apache.lucene.index.IndexWriterConfig;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
+import org.apache.lucene.benchmark.byTask.feeds.DemoHTMLParser;
+import org.xml.sax.SAXException;
 
-import org.apache.lucene.demo.CMPT456Analyzer;
 
 /** Index all text files under a directory.
  * <p>
  * This is a command-line application demonstrating simple Lucene indexing.
  * Run it with no command-line arguments for usage information.
  */
-public class IndexFiles {
+public class HtmlIndexFiles {
   
-  private IndexFiles() {}
+  private HtmlIndexFiles() {}
 
   /** Index all text files under a directory. */
   public static void main(String[] args) {
@@ -92,7 +93,7 @@ public class IndexFiles {
       System.out.println("Indexing to directory '" + indexPath + "'...");
 
       Directory dir = FSDirectory.open(Paths.get(indexPath));
-      Analyzer analyzer = new CMPT456Analyzer();
+      Analyzer analyzer = new StandardAnalyzer();
       IndexWriterConfig iwc = new IndexWriterConfig(analyzer);
 
       if (create) {
@@ -192,7 +193,15 @@ public class IndexFiles {
       // so that the text of the file is tokenized and indexed, but not stored.
       // Note that FileReader expects the file to be in UTF-8 encoding.
       // If that's not the case searching for special characters will fail.
-      doc.add(new TextField("contents", new BufferedReader(new InputStreamReader(stream, StandardCharsets.UTF_8))));
+      // doc.add(new TextField("contents", new BufferedReader(new InputStreamReader(stream, StandardCharsets.UTF_8))));
+
+      try{
+        DemoHTMLParser.Parser parser = new DemoHTMLParser.Parser(new BufferedReader(new InputStreamReader(stream, StandardCharsets.UTF_8)));
+        doc.add(new StringField("title", parser.title,Field.Store.YES));
+        doc.add(new TextField("contents", parser.body,Field.Store.YES));
+      }catch(SAXException e){
+        e.printStackTrace();
+      }
       
       if (writer.getConfig().getOpenMode() == OpenMode.CREATE) {
         // New index, so we just add the document (no old document can be there):
